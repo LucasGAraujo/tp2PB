@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+    <head>
+        <meta charset="UTF-8">
+        <title>Formulário de Usuário</title>
+        <link rel="stylesheet" href="/style.css">
+    </head>
+    <body>
+        <div class="container">
+
+            <h2 th:text="${user != null and user.id != 0} ? 'Editar Usuário' : 'Novo Usuário'">Formulário</h2>
+
+            <div class="error" th:if="${error}" th:text="${error}">
+                Mensagem de erro.
+            </div>
+
+            <form th:action="@{${user != null and user.id != 0} ? '/users/update/' + ${user.id} : '/users'}" method="post">
+                <div>
+                    <label for="name">Nome:</label>
+                    <input type="text" id="name" name="name" th:value="${user != null ? user.name : ''}">
+                </div>
+                <div>
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" name="email" th:value="${user != null ? user.email : ''}">
+                </div>
+                <button type="submit">Salvar</button>
+            </form>
+            <br/>
+            <a href="/users">Voltar para a Lista</a>
+        </div>
+    </body>
+</html>
