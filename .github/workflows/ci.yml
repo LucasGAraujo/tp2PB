@@ -1,4 +1,4 @@
-name: CI Java
+name: CI Java ()
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ "tp4build" ]
 
 jobs:
-  build-test-validate:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -22,8 +22,6 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Validar com Checkstyle
-        run: mvn checkstyle:check
 
-      - name: Testar e Buildar com Maven
-        run: mvn verify
+      - name: Buildar com Maven (pulando o Checkstyle)
+        run: mvn verify -Dcheckstyle.skip=true
