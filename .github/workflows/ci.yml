@@ -1,4 +1,4 @@
-name: CI Java ()
+name: CI Java (Build e Teste com Chrome)
 
 on:
   push:
@@ -14,7 +14,6 @@ jobs:
       - name: Checkout do repositório
         uses: actions/checkout@v4
 
-
       - name: Configurar JDK 24 (Temurin)
         uses: actions/setup-java@v4
         with:
@@ -22,6 +21,8 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
+      - name: Configurar Chrome
+        uses: browser-actions/setup-chrome@v1
 
-      - name: Buildar com Maven (pulando o Checkstyle)
+      - name: Buildar e Testar com Maven (pulando Checkstyle)
         run: mvn verify -Dcheckstyle.skip=true
