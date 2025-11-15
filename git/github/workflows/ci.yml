@@ -1,0 +1,29 @@
+name: CI Java
+
+on:
+  push:
+    branches: [ "tp4build" ]
+  pull_request:
+    branches: [ "tp4build" ]
+
+jobs:
+  build-test-validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+
+      - name: Configurar JDK 24 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '24'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Validar com Checkstyle
+        run: mvn checkstyle:check
+
+      - name: Testar e Buildar com Maven
+        run: mvn verify

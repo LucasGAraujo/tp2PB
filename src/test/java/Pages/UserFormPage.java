@@ -1,4 +1,4 @@
-package Pages;
+package Pages; // use lowercase por convenção Java
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
@@ -20,14 +20,15 @@ public class UserFormPage {
         driver.findElement(nameInput).sendKeys(name);
         return this;
     }
+
     public UserFormPage fillEmail(String email) {
         driver.findElement(emailInput).clear();
         driver.findElement(emailInput).sendKeys(email);
         return this;
     }
+
     public UserListPage clickSaveButton() {
         driver.findElement(saveButton).click();
-
         return new UserListPage(driver);
     }
 }

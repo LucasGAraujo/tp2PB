@@ -1,0 +1,20 @@
+<div th:fragment="content">
+    <h2 th:text="${isEditing} ? 'Editar Produto' : 'Novo Produto'"></h2>
+
+    <form th:action="@{/produtos/salvar}" method="post">
+        <input type="hidden" name="id" th:value="${produto.id}" />
+
+        <label>Nome:</label>
+        <input type="text" name="nome" th:value="${produto.nome}" required />
+
+        <label>Preço:</label>
+        <input type="number" name="preco" step="0.01" th:value="${produto.preco}" required />
+
+        <label>Estoque:</label>
+        <input type="number" name="estoque" th:value="${produto.estoque}" required />
+
+        <button type="submit">Salvar</button>
+    </form>
+
+    <a href="/produtos">Voltar</a>
+</div>
