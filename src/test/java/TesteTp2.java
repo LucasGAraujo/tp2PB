@@ -1,13 +1,14 @@
-
+// Imports do Selenium e Javalin (do SeleniumUITest)
 import io.javalin.Javalin;
 import org.example.Main;
 import org.junit.jupiter.api.*;
 import org.openqa.selenium.*;
-import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
+// Imports do PageObjects e WebDriverManager (do TesteTp2)
 import Pages.UserFormPage;
 import Pages.UserListPage;
 import io.github.bonigarcia.wdm.WebDriverManager;
@@ -37,12 +38,21 @@ public class TesteTp2 {
     @BeforeEach
     void setup() {
         WebDriverManager.chromedriver().setup();
+
+        // --- AQUI ESTÁ A CORREÇÃO ---
+        // Configura as opções do Chrome para rodar em modo headless (sem interface gráfica)
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--headless"); // Roda o Chrome em modo "sem tela"
         options.addArguments("--no-sandbox"); // Necessário para rodar em ambiente CI (Linux)
         options.addArguments("--disable-dev-shm-usage"); // Melhora a estabilidade em CI
         options.addArguments("--window-size=1920,1080"); // Define um tamanho de tela virtual
 
+        // Inicia o driver com as opções configuradas
+        // Esta linha estava faltando e causava o NullPointerException
+        driver = new ChromeDriver(options);
+        // --- FIM DA CORREÇÃO ---
+
+        // Esta linha (a 46 do log de erro) agora funcionará
         driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(5));
         wait = new WebDriverWait(driver, Duration.ofSeconds(5));
     }
@@ -53,6 +63,7 @@ public class TesteTp2 {
             driver.quit();
         }
     }
+
     @Test
     @DisplayName("Deve criar um novo produto")
     void deveCriarProduto() {
