@@ -48,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: production
-      url: http://localhost:8080
+      url: http://localhost:7929
 
     steps:
       - name: Checkout (necessário para scripts de teste)
@@ -73,15 +73,15 @@ jobs:
         run: |
           # Roda o JAR em background (&) para liberar o terminal para os testes
           nohup java -jar build/libs/*.jar > app.log 2>&1 &
-          echo "Aguardando aplicação subir na porta 8080..."
+          echo "Aguardando aplicação subir na porta 7929..."
           sleep 30 # Espera o Spring Boot/Java iniciar
 
       - name: Executar Selenium (E2E)
         run: ./gradlew seleniumTest
         env:
-          TARGET_URL: "http://localhost:8080"
+          TARGET_URL: "http://localhost:7929"
 
       - name: OWASP ZAP - Scan Dinâmico
         uses: zaproxy/action-baseline@v0.12.0
         with:
-          target: 'http://localhost:8080'
+          target: 'http://localhost:7929'
