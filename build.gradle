@@ -27,6 +27,7 @@ dependencies {
     api libs.com.h2database.h2
 
     // Dependências de Teste
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testImplementation libs.org.seleniumhq.selenium.selenium.java
     testImplementation libs.org.junit.jupiter.junit.jupiter.api
     testImplementation libs.org.junit.jupiter.junit.jupiter.engine
