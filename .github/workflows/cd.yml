@@ -1,0 +1,109 @@
+name: CD Pipeline (Multi-Env + OIDC)
+
+on:
+  push:
+    branches:
+      - tp5
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  issues: write
+
+jobs:
+
+  deploy-dev:
+    if: github.ref == 'refs/heads/tp5'
+    runs-on: ubuntu-latest
+
+    environment:
+      name: development
+      url: http://localhost:7929
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar JDK 21
+        uses: actions/setup-java@v4
+        with: { java-version: '21', distribution: 'temurin', cache: 'gradle' }
+
+      - run: chmod +x gradlew
+
+      - name: Build da Aplicação (DEV)
+        run: ./gradlew clean build -x test --no-daemon
+
+      - name: Simular Deploy em DEV
+        run: |
+          echo "🚀 Iniciando deploy automático no ambiente de DESENVOLVIMENTO..."
+          # Roda a aplicação em background
+          nohup java -jar build/libs/*.jar > app-dev.log 2>&1 &
+          sleep 15 # Espera um pouco para garantir que subiu
+
+      - name: Validação Pós-Deploy (Smoke Test)
+        run: |
+          echo "🩺 Executando testes rápidos de integridade em DEV..."
+          # Verifica se a porta 7929 está respondendo
+          curl -f -s http://localhost:7929 || exit 1
+          echo "✅ Ambiente DEV está respondendo com sucesso!"
+
+
+  deploy-prod:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+
+    environment:
+      name: production
+      url: http://localhost:7929
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar JDK 21
+        uses: actions/setup-java@v4
+        with: { java-version: '21', distribution: 'temurin', cache: 'gradle' }
+
+      - name: Autenticar na Nuvem (OIDC - Simulação)
+        run: |
+          echo "🔐 Solicitando token OIDC ao GitHub..."
+          echo "🔄 Trocando token com provedor de nuvem (AWS/Azure)..."
+          echo "✅ Autenticado com sucesso via OpenID Connect! (Acesso temporário concedido)"
+
+      - run: chmod +x gradlew
+
+      - name: Build para Produção
+        run: ./gradlew clean build -x test --no-daemon
+
+      - name: Deploy em Produção
+        run: |
+          echo "🚀 Executando Deploy Crítico em PRODUÇÃO..."
+          # Simula o deploy real
+          nohup java -jar build/libs/*.jar > app-prod.log 2>&1 &
+          
+          # Health Check Robusto (Aguarda a porta 7929)
+          echo "Aguardando aplicação subir..."
+          for i in {1..12}; do
+            if curl -s http://localhost:7929 > /dev/null; then
+              echo "✅ Aplicação online!"
+              break
+            fi
+            echo "Tentativa $i..."
+            sleep 5
+          done
+
+      - name: Testes de Integridade em Produção (Selenium)
+        run: ./gradlew seleniumTest
+        env:
+          TARGET_URL: "http://localhost:7929"
+
+      - name: Publicar Release Validada
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-production-release
+          path: build/libs/*.jar
+          retention-days: 90
