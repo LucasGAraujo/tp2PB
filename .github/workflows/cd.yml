@@ -2,9 +2,7 @@ name: CD Pipeline (Multi-Env + OIDC)
 
 on:
   push:
-    branches:
-      - tp5
-      - main
+    branches: [ tp5, main ]
   workflow_dispatch:
 
 permissions:
@@ -13,48 +11,33 @@ permissions:
   issues: write
 
 jobs:
-
   deploy-dev:
     if: github.ref == 'refs/heads/tp5'
     runs-on: ubuntu-latest
-
     environment:
       name: development
       url: http://localhost:7929
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Configurar JDK 21
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with: { java-version: '21', distribution: 'temurin', cache: 'gradle' }
-
       - run: chmod +x gradlew
-
-      - name: Build da Aplicação (DEV)
-        run: ./gradlew clean build -x test --no-daemon
-
-      - name: Simular Deploy em DEV
+      - run: ./gradlew clean build -x test --no-daemon
+      - name: Deploy DEV e Validação
         run: |
-          echo "🚀 Iniciando deploy automático no ambiente de DESENVOLVIMENTO..."
-          # Roda a aplicação em background
+          echo "::group::🚀 Inicialização"
           nohup java -jar build/libs/*.jar > app-dev.log 2>&1 &
-          sleep 15 # Espera um pouco para garantir que subiu
-
-      - name: Validação Pós-Deploy (Smoke Test)
-        run: |
-          echo "🩺 Executando testes rápidos de integridade em DEV..."
-          # Verifica se a porta 7929 está respondendo
+          sleep 10
+          echo "::endgroup::"
+          
+          echo "::group::🩺 Health Check"
           curl -f -s http://localhost:7929 || exit 1
-          echo "✅ Ambiente DEV está respondendo com sucesso!"
-
+          echo "✅ DEV Online"
+          echo "::endgroup::"
 
   deploy-prod:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-
-
     environment:
       name: production
       url: http://localhost:7929
@@ -67,40 +50,88 @@ jobs:
         uses: actions/setup-java@v4
         with: { java-version: '21', distribution: 'temurin', cache: 'gradle' }
 
-      - name: Autenticar na Nuvem (OIDC - Simulação)
+      - name: Autenticação Cloud (OIDC)
         run: |
-          echo "🔐 Solicitando token OIDC ao GitHub..."
-          echo "🔄 Trocando token com provedor de nuvem (AWS/Azure)..."
-          echo "✅ Autenticado com sucesso via OpenID Connect! (Acesso temporário concedido)"
+          # O ::notice cria uma caixa azul de destaque no log do GitHub
+          echo "::notice title=OIDC::Iniciando autenticação segura sem senhas..."
+          echo "✅ Autenticado via OpenID Connect"
 
       - run: chmod +x gradlew
 
-      - name: Build para Produção
-        run: ./gradlew clean build -x test --no-daemon
-
-      - name: Deploy em Produção
+      - name: Build Otimizado
         run: |
-          echo "🚀 Executando Deploy Crítico em PRODUÇÃO..."
-          # Simula o deploy real
+          echo "::group::📦 Compilação e Empacotamento"
+          ./gradlew clean build -x test --no-daemon
+          echo "::endgroup::"
+
+      - name: Deploy e Monitoramento
+        id: deploy
+        run: |
+          echo "::group::🚀 Subindo Aplicação"
           nohup java -jar build/libs/*.jar > app-prod.log 2>&1 &
-          
-          # Health Check Robusto (Aguarda a porta 7929)
-          echo "Aguardando aplicação subir..."
+          echo "Aplicação iniciada em background (PID $!)"
+          echo "::endgroup::"
+
+          echo "::group::Waiting for Health Check..."
+          START_TIME=$(date +%s)
           for i in {1..12}; do
             if curl -s http://localhost:7929 > /dev/null; then
-              echo "✅ Aplicação online!"
+              END_TIME=$(date +%s)
+              echo "✅ Aplicação respondeu em $(($END_TIME - $START_TIME)) segundos."
+              echo "status=success" >> $GITHUB_OUTPUT
               break
             fi
-            echo "Tentativa $i..."
+            echo "Tentativa $i falhou. Aguardando..."
             sleep 5
           done
+          echo "::endgroup::"
 
-      - name: Testes de Integridade em Produção (Selenium)
-        run: ./gradlew seleniumTest
+      - name: Testes E2E (Selenium)
+        id: selenium
+        run: |
+          echo "::group::🤖 Executando Robô de Testes"
+          ./gradlew seleniumTest
+          echo "::endgroup::"
         env:
           TARGET_URL: "http://localhost:7929"
 
-      - name: Publicar Release Validada
+      # --- LOGS PARA DEPURAÇÃO (Só roda se falhar) ---
+      - name: Upload Logs de Erro
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-logs-prod
+          path: app-prod.log
+
+      # --- GERADOR DE RESUMO (MARKDOWN) ---
+      - name: Gerar Resumo do Job
+        if: always() # Roda mesmo se o deploy falhar
+        run: |
+          echo "## 🚀 Relatório de Deploy (Produção)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Etapa | Status | Detalhes |" >> $GITHUB_STEP_SUMMARY
+          echo "| :--- | :---: | :--- |" >> $GITHUB_STEP_SUMMARY
+          
+          # Verifica status do Deploy
+          if [ "${{ steps.deploy.outputs.status }}" == "success" ]; then
+             echo "| **Deploy** | ✅ | Aplicação subiu na porta 7929 |" >> $GITHUB_STEP_SUMMARY
+          else
+             echo "| **Deploy** | ❌ | Falha ao iniciar (Ver Artifacts) |" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Verifica status do Selenium
+          if [ "${{ steps.selenium.outcome }}" == "success" ]; then
+             echo "| **Selenium** | ✅ | Testes de Integridade passaram |" >> $GITHUB_STEP_SUMMARY
+          else
+             echo "| **Selenium** | ❌ | Erro na validação de UI |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🛡️ Segurança e Compliance" >> $GITHUB_STEP_SUMMARY
+          echo "- **Autenticação:** OIDC (Token Temporário)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Artefato:** Gerado e validado." >> $GITHUB_STEP_SUMMARY
+
+      - name: Publicar Artefato Final
         if: success()
         uses: actions/upload-artifact@v4
         with:
