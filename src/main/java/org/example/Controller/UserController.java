@@ -8,7 +8,7 @@ import org.example.repository.UserRepository;
 import java.util.HashMap;
 
 public class UserController {
-    // ✅ Usar apenas uma instância de UserRepository
+
     private final UserRepository repo = new UserRepository();
 
     public void list(Context ctx) {
@@ -18,34 +18,24 @@ public class UserController {
     }
 
     public void createForm(Context ctx) {
-        ctx.render("user-form.html");
+        var model = new HashMap<String, Object>();
+        model.put("user", User.vazio());
+        ctx.render("user-form.html", model);
     }
 
     public void create(Context ctx) {
-        System.out.println(">>> 1. MÉTODO CREATE FOI ACIONADO!"); // Log 1
-
         String name = ctx.formParam("name");
         String email = ctx.formParam("email");
 
-        System.out.println(">>> 2. NOME RECEBIDO: '" + name + "'"); // Log 2
-
-        if (name == null || name.isBlank()) {
-            System.out.println(">>> 3. ERRO: NOME ESTÁ VAZIO! LANÇANDO EXCEÇÃO..."); // Log 3
-            throw new ValidationException("O campo 'Nome' é obrigatório.");
-        }
-        if (email == null || email.isBlank()) {
-            System.out.println(">>> 3. ERRO: EMAIL ESTÁ VAZIO! LANÇANDO EXCEÇÃO..."); // Log 3
-            throw new ValidationException("O campo 'Email' é obrigatório.");
-        }
+        validarCampos(name, email);
 
         if (repo.findByEmail(email).isPresent()) {
-            System.out.println(">>> 3. ERRO: EMAIL DUPLICADO! LANÇANDO EXCEÇÃO...");
             throw new ValidationException("Este e-mail já está cadastrado.");
         }
 
-        System.out.println(">>> 4. VALIDAÇÃO PASSOU! SALVANDO USUÁRIO..."); // Log 4
-        User newUser = new User(name, email);
-        repo.save(newUser); // ✅ usar a mesma instância
+        User novoUser = new User(name, email);
+        repo.save(novoUser);
+
         ctx.redirect("/users");
     }
 
@@ -67,22 +57,16 @@ public class UserController {
         String name = ctx.formParam("name");
         String email = ctx.formParam("email");
 
-        if (name == null || name.isBlank()) {
-            throw new ValidationException("O campo 'Nome' não pode ser vazio.");
-        }
-        if (email == null || email.isBlank()) {
-            throw new ValidationException("O campo 'Email' não pode ser vazio.");
-        }
+        validarCampos(name, email);
 
         User existingUser = repo.findById(id);
         if (existingUser == null) {
             throw new ValidationException("Usuário não encontrado.");
         }
 
-        // ✅ Atualiza o usuário mantendo o mesmo ID
-        existingUser.setName(name);
-        existingUser.setEmail(email);
-        repo.update(existingUser);
+        User updatedUser = existingUser.atualizar(name, email);
+
+        repo.update(updatedUser);
 
         ctx.redirect("/users");
     }
@@ -91,5 +75,14 @@ public class UserController {
         int id = Integer.parseInt(ctx.pathParam("id"));
         repo.delete(id);
         ctx.redirect("/users");
+    }
+
+    private void validarCampos(String name, String email) {
+        if (name == null || name.isBlank()) {
+            throw new ValidationException("O campo 'Nome' é obrigatório.");
+        }
+        if (email == null || email.isBlank()) {
+            throw new ValidationException("O campo 'Email' é obrigatório.");
+        }
     }
 }

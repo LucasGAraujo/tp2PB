@@ -18,36 +18,46 @@ class ProdutoControllerTest {
 
     private ProdutoDAO produtoDAO;
     private Context ctx;
+    private ProdutoController produtoController;
 
     @BeforeEach
     void setUp() {
         produtoDAO = mock(ProdutoDAO.class);
         ctx = mock(Context.class);
 
-        new ProdutoController(produtoDAO);
+        produtoController = new ProdutoController(produtoDAO);
     }
+
 
     @Test
     void deveListarProdutos() {
         when(produtoDAO.listarTodos()).thenReturn(Arrays.asList(
-                new Produto("Produto 1", 10.0, 5),
-                new Produto("Produto 2", 20.0, 3)
+                new Produto(1, "Produto 1", 10.0, 5),
+                new Produto(2, "Produto 2", 20.0, 3)
         ));
 
-        ProdutoController.listarProdutos(ctx);
+        produtoController.listarProdutos(ctx);
 
+        verify(produtoDAO).listarTodos();
         verify(ctx).render(eq("layout.html"), anyMap());
     }
 
+
     @Test
     void deveExibirFormularioEdicaoProdutoExistente() {
-        Produto p = new Produto("Produto 1", 10.0, 5);
-        p.setId(1);
-        when(produtoDAO.buscarPorId(1)).thenReturn(Optional.of(p));
-        when(ctx.pathParam("id")).thenReturn("1");
+        int produtoId = 1;
+        Produto produtoExistente = new Produto(produtoId, "Produto 1", 10.0, 5);
 
-        ProdutoController.exibirFormularioEdicao(ctx);
+        when(produtoDAO.buscarPorId(produtoId)).thenReturn(Optional.of(produtoExistente));
 
+        when(ctx.pathParam("id")).thenReturn(String.valueOf(produtoId));
+
+        when(ctx.pathParamAsClass("id", Integer.class)).thenReturn(mock(io.javalin.validation.Validator.class));
+        when(ctx.pathParamAsClass("id", Integer.class).get()).thenReturn(produtoId);
+
+        produtoController.exibirFormularioEdicao(ctx);
+
+        verify(produtoDAO).buscarPorId(produtoId);
         verify(ctx).render(eq("layout.html"), anyMap());
     }
 
@@ -59,19 +69,34 @@ class ProdutoControllerTest {
         when(ctx.formParam("preco")).thenReturn("15.0");
         when(ctx.formParam("estoque")).thenReturn("2");
 
-        ProdutoController.salvarProduto(ctx);
+        when(ctx.formParamAsClass("preco", Double.class)).thenReturn(mock(io.javalin.validation.Validator.class));
+        when(ctx.formParamAsClass("preco", Double.class).get()).thenReturn(15.0);
+        when(ctx.formParamAsClass("estoque", Integer.class)).thenReturn(mock(io.javalin.validation.Validator.class));
+        when(ctx.formParamAsClass("estoque", Integer.class).get()).thenReturn(2);
 
-        verify(produtoDAO).criar(any(Produto.class));
+
+        produtoController.salvarProduto(ctx);
+        ArgumentCaptor<Produto> produtoCaptor = ArgumentCaptor.forClass(Produto.class);
+        verify(produtoDAO).criar(produtoCaptor.capture());
+
+        Produto produtoSalvo = produtoCaptor.getValue();
+        assertEquals("Novo Produto", produtoSalvo.getNome());
+        assertEquals(0, produtoSalvo.getId());
+
         verify(ctx).redirect("/produtos");
     }
 
     @Test
     void deveDeletarProduto() {
-        when(ctx.pathParam("id")).thenReturn("1");
+        int produtoId = 1;
+        when(ctx.pathParam("id")).thenReturn(String.valueOf(produtoId));
 
-        ProdutoController.deletarProduto(ctx);
+        when(ctx.pathParamAsClass("id", Integer.class)).thenReturn(mock(io.javalin.validation.Validator.class));
+        when(ctx.pathParamAsClass("id", Integer.class).get()).thenReturn(produtoId);
 
-        verify(produtoDAO).deletar(1);
+        produtoController.deletarProduto(ctx);
+
+        verify(produtoDAO).deletar(produtoId);
         verify(ctx).redirect("/produtos");
     }
 }

@@ -25,7 +25,7 @@ import java.util.NoSuchElementException;
 public class Main {
 
     public static void main(String[] args) throws Exception {
-        startApp(7929);  // porta única para os 2 sistemas
+        startApp(7929);
     }
 
     public static Javalin startApp(int port) {
@@ -59,28 +59,32 @@ public class Main {
             }).start(port);
 
             UserController userController = new UserController();
-            new ProdutoController(produtoDAO);
+
+            // 1. Instanciar o ProdutoController e armazenar a referência
+            ProdutoController produtoController = new ProdutoController(produtoDAO);
 
             app.get("/", ctx -> ctx.render("index.html"));
 
+            // Rotas de User (Corretas: userController::metodo)
             app.get("/users", userController::list);
             app.get("/users/new", userController::createForm);
             app.post("/users", userController::create);
             app.get("/users/edit/{id}", userController::editForm);
             app.post("/users/update/{id}", userController::update);
             app.get("/users/delete/{id}", userController::delete);
-            app.get("/produtos", ProdutoController::listarProdutos);
-            app.get("/produtos/novo", ProdutoController::exibirFormularioCadastro);
-            app.get("/produtos/editar/{id}", ProdutoController::exibirFormularioEdicao);
-            app.post("/produtos/salvar", ProdutoController::salvarProduto);
-            app.post("/produtos/deletar/{id}", ProdutoController::deletarProduto);
+
+            app.get("/produtos", produtoController::listarProdutos);
+            app.get("/produtos/novo", produtoController::exibirFormularioCadastro);
+            app.get("/produtos/editar/{id}", produtoController::exibirFormularioEdicao);
+            app.post("/produtos/salvar", produtoController::salvarProduto);
+            app.post("/produtos/deletar/{id}", produtoController::deletarProduto);
 
             app.exception(ValidationException.class, (e, ctx) -> {
                 User submittedUser = new User(ctx.formParam("name"), ctx.formParam("email"));
 
                 if (ctx.pathParamMap().containsKey("id")) {
                     try {
-                        submittedUser.setId(Long.parseLong(ctx.pathParam("id")));
+
                     } catch (NumberFormatException ignored) {}
                 }
 

@@ -28,19 +28,17 @@ public class ProdutoDAOTest {
 
     @Test
     void deveCriarListarEAtualizarProduto() {
-        Produto p = new Produto("Mouse", 99.90, 10);
+        Produto p = new Produto(0, "Mouse", 99.90, 10);
         int id = produtoDAO.criar(p);
-
         List<Produto> produtos = produtoDAO.listarTodos();
         Assertions.assertEquals(1, produtos.size());
-
         Produto salvo = produtos.get(0);
-        salvo.setPreco(79.90);
-        produtoDAO.atualizar(salvo);
-
-        Produto atualizado = produtoDAO.buscarPorId(id).get();
-        Assertions.assertEquals(79.90, atualizado.getPreco());
+        Produto atualizado = new Produto(salvo.getId(), "Mouse", 79.90, 10);
+        produtoDAO.atualizar(atualizado);
+        Produto buscado = produtoDAO.buscarPorId(id).get();
+        Assertions.assertEquals(79.90, buscado.getPreco());
     }
+
 
     @Test
     void deveDeletarProduto() {

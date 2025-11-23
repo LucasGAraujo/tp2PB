@@ -1,6 +1,7 @@
 package org.example.dao;
 
 import org.jdbi.v3.sqlobject.config.RegisterBeanMapper;
+import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.customizer.BindBean;
 import org.jdbi.v3.sqlobject.statement.GetGeneratedKeys;
@@ -10,7 +11,7 @@ import org.example.model.Produto;
 import java.util.List;
 import java.util.Optional;
 
-@RegisterBeanMapper(Produto.class)
+@RegisterConstructorMapper(Produto.class)
 public interface ProdutoDAO {
 
     @SqlUpdate("INSERT INTO produto (nome, preco, estoque) VALUES (:nome, :preco, :estoque)")

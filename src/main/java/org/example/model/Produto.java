@@ -1,14 +1,25 @@
 package org.example.model;
 
-public class Produto {
-    private int id;
-    private String nome;
-    private double preco;
-    private int estoque;
+import org.jdbi.v3.core.mapper.reflect.ColumnName;
+import org.jdbi.v3.core.mapper.reflect.JdbiConstructor;
 
-    public Produto() {}
+public final class Produto {
+
+    private final int id;
+    private final String nome;
+    private final double preco;
+    private final int estoque;
 
     public Produto(String nome, double preco, int estoque) {
+        this(0, nome, preco, estoque);
+    }
+
+    @JdbiConstructor
+    public Produto(@ColumnName("id") int id,
+                   @ColumnName("nome") String nome,
+                   @ColumnName("preco") double preco,
+                   @ColumnName("estoque") int estoque) {
+        this.id = id;
         this.nome = nome;
         this.preco = preco;
         this.estoque = estoque;
@@ -19,8 +30,11 @@ public class Produto {
     public double getPreco() { return preco; }
     public int getEstoque() { return estoque; }
 
-    public void setId(int id) { this.id = id; }
-    public void setNome(String nome) { this.nome = nome; }
-    public void setPreco(double preco) { this.preco = preco; }
-    public void setEstoque(int estoque) { this.estoque = estoque; }
+    public Produto atualizar(String nome, double preco, int estoque) {
+        return new Produto(this.id, nome, preco, estoque);
+    }
+
+    public static Produto vazio() {
+        return new Produto(0, "", 0.0, 0);
+    }
 }

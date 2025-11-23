@@ -38,21 +38,13 @@ public class TesteTp2 {
     @BeforeEach
     void setup() {
         WebDriverManager.chromedriver().setup();
-
-        // --- AQUI ESTÁ A CORREÇÃO ---
-        // Configura as opções do Chrome para rodar em modo headless (sem interface gráfica)
         ChromeOptions options = new ChromeOptions();
-        options.addArguments("--headless"); // Roda o Chrome em modo "sem tela"
-        options.addArguments("--no-sandbox"); // Necessário para rodar em ambiente CI (Linux)
-        options.addArguments("--disable-dev-shm-usage"); // Melhora a estabilidade em CI
-        options.addArguments("--window-size=1920,1080"); // Define um tamanho de tela virtual
-
-        // Inicia o driver com as opções configuradas
-        // Esta linha estava faltando e causava o NullPointerException
+        options.addArguments("--headless");
+        options.addArguments("--no-sandbox");
+        options.addArguments("--disable-dev-shm-usage");
+        options.addArguments("--window-size=1920,1080");
         driver = new ChromeDriver(options);
-        // --- FIM DA CORREÇÃO ---
 
-        // Esta linha (a 46 do log de erro) agora funcionará
         driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(5));
         wait = new WebDriverWait(driver, Duration.ofSeconds(5));
     }

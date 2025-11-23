@@ -1,24 +1,36 @@
-package org.example.model;
+    package org.example.model;
 
-public class User {
-    private long id;
-    private String name;
-    private String email;
+    public final class User {
 
-    public User() {}
-    public User(String name, String email) {
-        this.name = name;
-        this.email = email;
+        private final long id;
+        private final String name;
+        private final String email;
+
+        public User(String name, String email) {
+            this(0, name, email);
+        }
+
+        public User(long id, String name, String email) {
+            this.id = id;
+            this.name = name;
+            this.email = email;
+        }
+
+        public long getId() {
+            return id;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public String getEmail() {
+            return email;
+        }
+        public User atualizar(String name, String email) {
+            return new User(this.id, name, email);
+        }
+        public static User vazio() {
+            return new User(0, "", "");
+        }
     }
-
-
-    // getters e setters
-    public int getId() { return (int) id; }
-    public void setId(long id) {
-        this.id = id;
-    }    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
-}
-
