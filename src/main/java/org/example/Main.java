@@ -37,7 +37,6 @@ public class Main {
             Jdbi jdbi = Jdbi.create(dataSource);
             jdbi.installPlugin(new SqlObjectPlugin());
 
-            // Leitura segura do SQL dentro do JAR (Já estava correto no seu código)
             try (InputStream is = Main.class.getResourceAsStream("/db/init.sql")) {
                 if (is == null) {
                     throw new RuntimeException("ERRO CRÍTICO: Arquivo /db/init.sql não encontrado dentro do JAR/Classpath.");
