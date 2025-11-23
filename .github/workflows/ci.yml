@@ -32,7 +32,7 @@ jobs:
         with:
           languages: java
       - name: Build e Testes com Gradle
-        run: ./gradlew build
+        run: ./gradlew clean build --no-daemon
 
       - name: Finalizar Análise CodeQL
         uses: github/codeql-action/analyze@v3
