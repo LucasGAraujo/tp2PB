@@ -53,6 +53,7 @@ jobs:
   cd-deploy-verify:
     needs: ci-build-security
     runs-on: ubuntu-latest
+
     permissions:
       contents: read
       issues: write
