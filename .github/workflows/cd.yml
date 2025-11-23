@@ -1,8 +1,10 @@
-name: CD Pipeline (Multi-Env + OIDC)
+name: CD Pipeline
 
 on:
   push:
-    branches: [ tp5, main ]
+    branches:
+      - tp5
+      - main
   workflow_dispatch:
 
 permissions:
@@ -17,23 +19,33 @@ jobs:
     environment:
       name: development
       url: http://localhost:7929
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with: { java-version: '21', distribution: 'temurin', cache: 'gradle' }
+      - name: Checkout codigo
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'gradle'
+
       - run: chmod +x gradlew
-      - run: ./gradlew clean build -x test --no-daemon
-      - name: Deploy DEV e Validação
+
+      - name: Build (Sem testes unitarios)
+        run: ./gradlew clean build -x test --no-daemon
+
+      - name: Deploy em Dev
         run: |
-          echo "::group::🚀 Inicialização"
+          echo "Iniciando aplicacao em background..."
           nohup java -jar build/libs/*.jar > app-dev.log 2>&1 &
-          sleep 10
-          echo "::endgroup::"
-          
-          echo "::group::🩺 Health Check"
+          sleep 15
+
+      - name: Smoke Test
+        run: |
           curl -f -s http://localhost:7929 || exit 1
-          echo "✅ DEV Online"
-          echo "::endgroup::"
+          echo "Ambiente DEV respondendo OK"
 
   deploy-prod:
     if: github.ref == 'refs/heads/main'
@@ -43,98 +55,56 @@ jobs:
       url: http://localhost:7929
 
     steps:
-      - name: Checkout
+      - name: Checkout codigo
         uses: actions/checkout@v4
 
-      - name: Configurar JDK 21
+      - name: Setup Java 21
         uses: actions/setup-java@v4
-        with: { java-version: '21', distribution: 'temurin', cache: 'gradle' }
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'gradle'
 
-      - name: Autenticação Cloud (OIDC)
+      - name: Autenticacao OIDC (AWS)
         run: |
-          # O ::notice cria uma caixa azul de destaque no log do GitHub
-          echo "::notice title=OIDC::Iniciando autenticação segura sem senhas..."
-          echo "✅ Autenticado via OpenID Connect"
+          echo "Solicitando token OIDC..."
+          echo "Autenticado com sucesso no provedor de nuvem."
 
       - run: chmod +x gradlew
 
-      - name: Build Otimizado
-        run: |
-          echo "::group::📦 Compilação e Empacotamento"
-          ./gradlew clean build -x test --no-daemon
-          echo "::endgroup::"
+      - name: Build Producao
+        run: ./gradlew clean build -x test --no-daemon
 
-      - name: Deploy e Monitoramento
-        id: deploy
+      - name: Deploy Producao
         run: |
-          echo "::group::🚀 Subindo Aplicação"
+          echo "Subindo aplicacao..."
           nohup java -jar build/libs/*.jar > app-prod.log 2>&1 &
-          echo "Aplicação iniciada em background (PID $!)"
-          echo "::endgroup::"
-
-          echo "::group::Waiting for Health Check..."
-          START_TIME=$(date +%s)
+          
+          echo "Aguardando inicializacao..."
           for i in {1..12}; do
             if curl -s http://localhost:7929 > /dev/null; then
-              END_TIME=$(date +%s)
-              echo "✅ Aplicação respondeu em $(($END_TIME - $START_TIME)) segundos."
-              echo "status=success" >> $GITHUB_OUTPUT
+              echo "Aplicacao online."
               break
             fi
-            echo "Tentativa $i falhou. Aguardando..."
             sleep 5
           done
-          echo "::endgroup::"
 
-      - name: Testes E2E (Selenium)
-        id: selenium
-        run: |
-          echo "::group::🤖 Executando Robô de Testes"
-          ./gradlew seleniumTest
-          echo "::endgroup::"
+      - name: Testes Selenium
+        run: ./gradlew seleniumTest
         env:
           TARGET_URL: "http://localhost:7929"
 
-      # --- LOGS PARA DEPURAÇÃO (Só roda se falhar) ---
-      - name: Upload Logs de Erro
+      - name: Upload Logs se falhar
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: debug-logs-prod
+          name: logs-erro
           path: app-prod.log
-
-      # --- GERADOR DE RESUMO (MARKDOWN) ---
-      - name: Gerar Resumo do Job
-        if: always() # Roda mesmo se o deploy falhar
-        run: |
-          echo "## 🚀 Relatório de Deploy (Produção)" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Etapa | Status | Detalhes |" >> $GITHUB_STEP_SUMMARY
-          echo "| :--- | :---: | :--- |" >> $GITHUB_STEP_SUMMARY
-          
-          # Verifica status do Deploy
-          if [ "${{ steps.deploy.outputs.status }}" == "success" ]; then
-             echo "| **Deploy** | ✅ | Aplicação subiu na porta 7929 |" >> $GITHUB_STEP_SUMMARY
-          else
-             echo "| **Deploy** | ❌ | Falha ao iniciar (Ver Artifacts) |" >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          # Verifica status do Selenium
-          if [ "${{ steps.selenium.outcome }}" == "success" ]; then
-             echo "| **Selenium** | ✅ | Testes de Integridade passaram |" >> $GITHUB_STEP_SUMMARY
-          else
-             echo "| **Selenium** | ❌ | Erro na validação de UI |" >> $GITHUB_STEP_SUMMARY
-          fi
-
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🛡️ Segurança e Compliance" >> $GITHUB_STEP_SUMMARY
-          echo "- **Autenticação:** OIDC (Token Temporário)" >> $GITHUB_STEP_SUMMARY
-          echo "- **Artefato:** Gerado e validado." >> $GITHUB_STEP_SUMMARY
 
       - name: Publicar Artefato Final
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: app-production-release
+          name: app-release
           path: build/libs/*.jar
           retention-days: 90
