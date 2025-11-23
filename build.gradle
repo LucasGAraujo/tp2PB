@@ -42,8 +42,8 @@ description = 'TP2'
 // Atualize para uma versão mais recente se possível (17 ou 21),
 // mas 1.8 funciona se for requisito do projeto.
 java {
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
 
 publishing {
