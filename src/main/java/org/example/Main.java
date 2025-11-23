@@ -2,7 +2,8 @@ package org.example;
 
 import io.javalin.Javalin;
 import io.javalin.rendering.template.JavalinThymeleaf;
-
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import org.example.Controller.UserController;
 import org.example.exception.ValidationException;
 import org.example.model.User;
@@ -36,11 +37,13 @@ public class Main {
             Jdbi jdbi = Jdbi.create(dataSource);
             jdbi.installPlugin(new SqlObjectPlugin());
 
-            String initSql = new String(Files.readAllBytes(
-                    Paths.get("src/main/resources/db/init.sql")
-            ));
-            jdbi.useHandle(handle -> handle.execute(initSql));
-
+            try (InputStream is = Main.class.getResourceAsStream("/db/init.sql")) {
+                if (is == null) {
+                    throw new RuntimeException("ERRO CRÍTICO: Arquivo /db/init.sql não encontrado dentro do JAR/Classpath.");
+                }
+                String initSql = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+                jdbi.useHandle(handle -> handle.execute(initSql));
+            }
             ProdutoDAO produtoDAO = jdbi.onDemand(ProdutoDAO.class);
 
 

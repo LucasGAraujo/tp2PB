@@ -1,0 +1,105 @@
+/*
+ * Arquivo ajustado para suportar CI/CD com Selenium e JUnit 5
+ */
+
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    // Adicione o plugin 'application' se quiser gerar um script de execução fácil
+    // id 'application'
+}
+
+repositories {
+    mavenLocal()
+    maven {
+        url = uri('https://repo.maven.apache.org/maven2/')
+    }
+}
+
+dependencies {
+    // Dependências da Aplicação
+    api libs.io.javalin.javalin
+    api libs.io.javalin.javalin.rendering
+    api libs.org.thymeleaf.thymeleaf
+    api libs.org.slf4j.slf4j.simple
+    api libs.org.jdbi.jdbi3.core
+    api libs.org.jdbi.jdbi3.sqlobject
+    api libs.com.h2database.h2
+
+    // Dependências de Teste
+    testImplementation libs.org.seleniumhq.selenium.selenium.java
+    testImplementation libs.org.junit.jupiter.junit.jupiter.api
+    testImplementation libs.org.junit.jupiter.junit.jupiter.engine
+    testImplementation libs.org.junit.jupiter.junit.jupiter.params
+    testImplementation libs.org.mockito.mockito.core
+    testImplementation libs.io.github.bonigarcia.webdrivermanager
+}
+
+group = 'org.example'
+version = '1.0-SNAPSHOT'
+description = 'TP2'
+
+// Atualize para uma versão mais recente se possível (17 ou 21),
+// mas 1.8 funciona se for requisito do projeto.
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from(components.java)
+        }
+    }
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+tasks.withType(Javadoc) {
+    options.encoding = 'UTF-8'
+}
+
+// --- CONFIGURAÇÕES CRÍTICAS PARA O PIPELINE ---
+
+// 1. Configurar o teste padrão para usar JUnit 5
+test {
+    useJUnitPlatform()
+}
+
+// 2. Criar a task personalizada para o Selenium
+// O pipeline executa: ./gradlew seleniumTest
+tasks.register('seleniumTest', Test) {
+    description = 'Executa testes E2E com Selenium'
+    group = 'verification'
+
+    useJUnitPlatform()
+
+    // IMPORTANTE: Isso filtra quais testes serão rodados aqui.
+    // Certifique-se de que sua classe de teste Selenium tenha "Selenium" no nome.
+    // Exemplo: MeuProjetoSeleniumTest.java
+    filter {
+        includeTestsMatching "*Selenium*"
+    }
+
+    // Se quiser rodar sempre, mesmo que esteja "up-to-date"
+    outputs.upToDateWhen { false }
+}
+
+// 3. Configurar o JAR para ser executável (Necessário para o 'java -jar' no pipeline)
+jar {
+    manifest {
+        attributes(
+                // SUBSTITUA 'org.example.Main' PELA SUA CLASSE PRINCIPAL (onde está o public static void main)
+                'Main-Class': 'org.example.Main'
+        )
+    }
+    // Para incluir todas as dependências no JAR (Fat Jar), o ideal seria usar o plugin 'shadow',
+    // mas esta configuração básica ajuda o 'java -jar' a encontrar a classe principal.
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}

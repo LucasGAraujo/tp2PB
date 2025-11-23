@@ -17,7 +17,7 @@ import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class TesteTp2 {
+public class SeleniumTest {
 
     private static Javalin app;
     private WebDriver driver;
