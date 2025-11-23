@@ -37,6 +37,7 @@ public class Main {
             Jdbi jdbi = Jdbi.create(dataSource);
             jdbi.installPlugin(new SqlObjectPlugin());
 
+            // Leitura segura do SQL dentro do JAR (Já estava correto no seu código)
             try (InputStream is = Main.class.getResourceAsStream("/db/init.sql")) {
                 if (is == null) {
                     throw new RuntimeException("ERRO CRÍTICO: Arquivo /db/init.sql não encontrado dentro do JAR/Classpath.");
@@ -60,15 +61,21 @@ public class Main {
                 config.fileRenderer(new JavalinThymeleaf(templateEngine));
                 config.staticFiles.add("/public");
             }).start(port);
+            app.before(ctx -> {
+                ctx.header("X-Frame-Options", "DENY");
+                ctx.header("X-Content-Type-Options", "nosniff");
+                ctx.header("Content-Security-Policy", "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:;");
+                ctx.header("Permissions-Policy", "geolocation=(), microphone=(), camera=()");
+                ctx.header("Referrer-Policy", "no-referrer-when-downgrade");
+            });
+            // =================================================================================
+
 
             UserController userController = new UserController();
-
-            // 1. Instanciar o ProdutoController e armazenar a referência
             ProdutoController produtoController = new ProdutoController(produtoDAO);
 
             app.get("/", ctx -> ctx.render("index.html"));
 
-            // Rotas de User (Corretas: userController::metodo)
             app.get("/users", userController::list);
             app.get("/users/new", userController::createForm);
             app.post("/users", userController::create);
